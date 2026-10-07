@@ -1,0 +1,91 @@
+from django.test import TestCase
+from rest_framework import status
+from rest_framework.test import APITestCase
+
+from .models import Category, Product
+
+
+class CategoryModelTest(TestCase):
+    def test_category_can_be_created(self):
+        category = Category.objects.create(
+            name="Test Category",
+            description="Test description",
+        )
+
+        self.assertEqual(category.name, "Test Category")
+        self.assertTrue(category.is_active)
+
+
+class CategoryAPITest(APITestCase):
+    def test_category_list_api(self):
+        Category.objects.create(
+            name="Rings",
+            description="Fashion rings and jewelry rings",
+        )
+
+        response = self.client.get("/api/catalog/categories/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["name"], "Rings")
+
+
+class ProductModelTest(TestCase):
+    def test_product_can_be_created(self):
+        category = Category.objects.create(
+            name="Rings",
+            description="Fashion rings and jewelry rings",
+        )
+
+        product = Product.objects.create(
+            category=category,
+            name="Test Gold Ring",
+            description="Test product",
+            price=250.00,
+            stock_quantity=10,
+        )
+
+        self.assertEqual(product.name, "Test Gold Ring")
+        self.assertEqual(product.stock_quantity, 10)
+        self.assertTrue(product.is_active)
+
+
+class ProductAPITest(APITestCase):
+    def setUp(self):
+        self.category = Category.objects.create(
+            name="Rings",
+            description="Fashion rings and jewelry rings",
+        )
+
+        self.product = Product.objects.create(
+            category=self.category,
+            name="Gold Fashion Ring",
+            description="Elegant gold fashion ring",
+            price=250.00,
+            stock_quantity=10,
+        )
+
+    def test_product_list_api(self):
+        response = self.client.get("/api/catalog/products/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["name"], "Gold Fashion Ring")
+
+    def test_product_filter_by_category(self):
+        response = self.client.get(
+            f"/api/catalog/products/?category={self.category.id}"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["name"], "Gold Fashion Ring")
+
+    def test_inactive_product_is_not_returned(self):
+        self.product.is_active = False
+        self.product.save()
+
+        response = self.client.get("/api/catalog/products/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
