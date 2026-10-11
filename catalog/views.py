@@ -12,6 +12,9 @@ class ProductListView(generics.ListAPIView):
         category_id = self.request.query_params.get("category")
 
         if category_id:
+            if not category_id.isdigit():
+                return Product.objects.none()
+
             queryset = queryset.filter(category_id=category_id)
 
         return queryset

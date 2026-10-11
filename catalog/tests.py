@@ -12,6 +12,7 @@ class CategoryModelTest(TestCase):
             description="Test description",
         )
 
+        self.assertIsNotNone(category.pk)
         self.assertEqual(category.name, "Test Category")
         self.assertTrue(category.is_active)
 
@@ -45,6 +46,7 @@ class ProductModelTest(TestCase):
             stock_quantity=10,
         )
 
+        self.assertIsNotNone(product.pk)
         self.assertEqual(product.name, "Test Gold Ring")
         self.assertEqual(product.stock_quantity, 10)
         self.assertTrue(product.is_active)
@@ -86,6 +88,18 @@ class ProductAPITest(APITestCase):
         self.product.save()
 
         response = self.client.get("/api/catalog/products/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
+
+    def test_product_filter_with_non_numeric_category(self):
+        response = self.client.get("/api/catalog/products/?category=abc")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
+
+    def test_product_filter_with_negative_category(self):
+        response = self.client.get("/api/catalog/products/?category=-5")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 0)
