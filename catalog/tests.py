@@ -107,3 +107,54 @@ class ProductAPITest(APITestCase):
             status.HTTP_400_BAD_REQUEST,
         )
         self.assertIn("category", response.data)
+
+    def test_product_serializer_rejects_blank_name(self):
+        from .serializers import ProductSerializer
+
+        data = {
+            "category": self.category.id,
+            "name": "   ",
+            "description": "Test product",
+            "price": "250.00",
+            "stock_quantity": 10,
+            "is_active": True,
+        }
+
+        serializer = ProductSerializer(data=data)
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("name", serializer.errors)
+
+    def test_product_serializer_rejects_zero_price(self):
+        from .serializers import ProductSerializer
+
+        data = {
+            "category": self.category.id,
+            "name": "Test Ring",
+            "description": "Test product",
+            "price": "0.00",
+            "stock_quantity": 10,
+            "is_active": True,
+        }
+
+        serializer = ProductSerializer(data=data)
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("price", serializer.errors)
+
+    def test_product_serializer_rejects_negative_stock(self):
+        from .serializers import ProductSerializer
+
+        data = {
+            "category": self.category.id,
+            "name": "Test Ring",
+            "description": "Test product",
+            "price": "250.00",
+            "stock_quantity": -5,
+            "is_active": True,
+        }
+
+        serializer = ProductSerializer(data=data)
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("stock_quantity", serializer.errors)
