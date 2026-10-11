@@ -34,6 +34,27 @@ class CategoryAPITest(APITestCase):
             category.name,
         )
 
+    def test_inactive_category_is_not_returned(self):
+        Category.objects.create(
+            name="Rings",
+            description="Active category",
+        )
+
+        Category.objects.create(
+            name="Bracelets",
+            description="Inactive category",
+            is_active=False,
+        )
+
+        response = self.client.get("/api/catalog/categories/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(
+            response.data["results"][0]["name"],
+            "Rings",
+        )
+
 
 class ProductModelTest(TestCase):
     def test_product_can_be_created(self):
@@ -83,6 +104,40 @@ class ProductAPITest(APITestCase):
             "Gold Fashion Ring",
         )
 
+    def test_product_detail_api(self):
+        response = self.client.get(
+            f"/api/catalog/products/{self.product.id}/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], self.product.id)
+        self.assertEqual(
+            response.data["name"],
+            "Gold Fashion Ring",
+        )
+        self.assertEqual(response.data["price"], "250.00")
+
+    def test_product_detail_returns_404_for_nonexistent_product(self):
+        response = self.client.get("/api/catalog/products/9999/")
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+
+    def test_inactive_product_detail_returns_404(self):
+        self.product.is_active = False
+        self.product.save()
+
+        response = self.client.get(
+            f"/api/catalog/products/{self.product.id}/"
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+
     def test_product_filter_by_category(self):
         response = self.client.get(
             f"/api/catalog/products/?category={self.category.id}"
@@ -106,7 +161,9 @@ class ProductAPITest(APITestCase):
         self.assertEqual(len(response.data["results"]), 0)
 
     def test_product_filter_with_non_numeric_category(self):
-        response = self.client.get("/api/catalog/products/?category=abc")
+        response = self.client.get(
+            "/api/catalog/products/?category=abc"
+        )
 
         self.assertEqual(
             response.status_code,
@@ -115,7 +172,9 @@ class ProductAPITest(APITestCase):
         self.assertIn("category", response.data)
 
     def test_product_filter_with_negative_category(self):
-        response = self.client.get("/api/catalog/products/?category=-5")
+        response = self.client.get(
+            "/api/catalog/products/?category=-5"
+        )
 
         self.assertEqual(
             response.status_code,
