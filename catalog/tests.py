@@ -3,6 +3,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from .models import Category, Product
+from .serializers import ProductSerializer
 
 
 class CategoryModelTest(TestCase):
@@ -18,7 +19,7 @@ class CategoryModelTest(TestCase):
 
 class CategoryAPITest(APITestCase):
     def test_category_list_api(self):
-        Category.objects.create(
+        category = Category.objects.create(
             name="Rings",
             description="Fashion rings and jewelry rings",
         )
@@ -26,8 +27,12 @@ class CategoryAPITest(APITestCase):
         response = self.client.get("/api/catalog/categories/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["name"], "Rings")
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(
+            response.data["results"][0]["name"],
+            category.name,
+        )
 
 
 class ProductModelTest(TestCase):
@@ -41,7 +46,7 @@ class ProductModelTest(TestCase):
             category=category,
             name="Test Gold Ring",
             description="Test product",
-            price=250.00,
+            price="250.00",
             stock_quantity=10,
         )
 
@@ -61,7 +66,7 @@ class ProductAPITest(APITestCase):
             category=self.category,
             name="Gold Fashion Ring",
             description="Elegant gold fashion ring",
-            price=250.00,
+            price="250.00",
             stock_quantity=10,
         )
 
@@ -69,8 +74,14 @@ class ProductAPITest(APITestCase):
         response = self.client.get("/api/catalog/products/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["name"], "Gold Fashion Ring")
+        self.assertEqual(response.data["count"], 1)
+        self.assertIsNone(response.data["next"])
+        self.assertIsNone(response.data["previous"])
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(
+            response.data["results"][0]["name"],
+            "Gold Fashion Ring",
+        )
 
     def test_product_filter_by_category(self):
         response = self.client.get(
@@ -78,8 +89,11 @@ class ProductAPITest(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["name"], "Gold Fashion Ring")
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(
+            response.data["results"][0]["name"],
+            "Gold Fashion Ring",
+        )
 
     def test_inactive_product_is_not_returned(self):
         self.product.is_active = False
@@ -88,7 +102,8 @@ class ProductAPITest(APITestCase):
         response = self.client.get("/api/catalog/products/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 0)
+        self.assertEqual(response.data["count"], 0)
+        self.assertEqual(len(response.data["results"]), 0)
 
     def test_product_filter_with_non_numeric_category(self):
         response = self.client.get("/api/catalog/products/?category=abc")
@@ -108,9 +123,16 @@ class ProductAPITest(APITestCase):
         )
         self.assertIn("category", response.data)
 
-    def test_product_serializer_rejects_blank_name(self):
-        from .serializers import ProductSerializer
+    def test_product_pagination_response_structure(self):
+        response = self.client.get("/api/catalog/products/")
 
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("count", response.data)
+        self.assertIn("next", response.data)
+        self.assertIn("previous", response.data)
+        self.assertIn("results", response.data)
+
+    def test_product_serializer_rejects_blank_name(self):
         data = {
             "category": self.category.id,
             "name": "   ",
@@ -126,8 +148,6 @@ class ProductAPITest(APITestCase):
         self.assertIn("name", serializer.errors)
 
     def test_product_serializer_rejects_zero_price(self):
-        from .serializers import ProductSerializer
-
         data = {
             "category": self.category.id,
             "name": "Test Ring",
@@ -143,8 +163,6 @@ class ProductAPITest(APITestCase):
         self.assertIn("price", serializer.errors)
 
     def test_product_serializer_rejects_negative_stock(self):
-        from .serializers import ProductSerializer
-
         data = {
             "category": self.category.id,
             "name": "Test Ring",
