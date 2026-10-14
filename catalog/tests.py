@@ -1,9 +1,28 @@
+import base64
+from tempfile import TemporaryDirectory
+
+from django.contrib import admin
+from django.forms import ClearableFileInput
 from django.test import TestCase
+from django.test.utils import override_settings
+from django.core.files.base import ContentFile
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from .models import Category, Product
 from .serializers import ProductSerializer
+
+
+class ProductAdminUploadTest(TestCase):
+    def test_add_product_form_uses_an_image_file_upload(self):
+        product_admin = admin.site._registry[Product]
+        image_field = Product._meta.get_field("image")
+        form_field = product_admin.formfield_for_dbfield(
+            image_field,
+            request=None,
+        )
+
+        self.assertIsInstance(form_field.widget, ClearableFileInput)
 
 
 class CategoryModelTest(TestCase):
@@ -116,6 +135,29 @@ class ProductAPITest(APITestCase):
             "Gold Fashion Ring",
         )
         self.assertEqual(response.data["price"], "250.00")
+
+    def test_product_api_returns_backend_media_url_for_uploaded_image(self):
+        png_data = base64.b64decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/"
+            "m8sAAAAASUVORK5CYII="
+        )
+        with TemporaryDirectory() as media_root:
+            with override_settings(MEDIA_ROOT=media_root):
+                self.product.image.save(
+                    "gold-ring.png",
+                    ContentFile(png_data),
+                    save=True,
+                )
+
+                response = self.client.get(
+                    f"/api/catalog/products/{self.product.id}/"
+                )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["image"],
+            f"http://testserver/media/products/{self.product.image.name.split('/')[-1]}",
+        )
 
     def test_product_detail_returns_404_for_nonexistent_product(self):
         response = self.client.get("/api/catalog/products/9999/")

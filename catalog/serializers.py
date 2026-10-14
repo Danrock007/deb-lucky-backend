@@ -20,6 +20,16 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source="category.name", read_only=True)
+    image = serializers.SerializerMethodField()
+
+    def get_image(self, product):
+        if not product.image:
+            return None
+        request = self.context.get("request")
+        image_url = product.image.url
+        return request.build_absolute_uri(image_url) if request else image_url
+
     def validate_name(self, value):
         cleaned_name = value.strip()
 
@@ -51,9 +61,12 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "category",
+            "category_name",
             "name",
             "description",
             "price",
             "stock_quantity",
+            "image",
+            "badge",
             "is_active",
         ]
