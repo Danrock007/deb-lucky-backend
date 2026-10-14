@@ -2,6 +2,7 @@ import base64
 from tempfile import TemporaryDirectory
 
 from django.contrib import admin
+from django.contrib.auth import get_user_model
 from django.forms import ClearableFileInput
 from django.test import TestCase
 from django.test.utils import override_settings
@@ -11,6 +12,31 @@ from rest_framework.test import APITestCase
 
 from .models import Category, Product
 from .serializers import ProductSerializer
+
+
+@override_settings(
+    STORAGES={
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+)
+class AdminInterfaceTest(TestCase):
+    def test_admin_homepage_uses_store_branding_and_stylesheet(self):
+        user = get_user_model().objects.create_superuser(
+            username="admin",
+            email="admin@example.com",
+            password="safe-test-password",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get("/admin/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Store administration")
+        self.assertContains(response, "Deb Lucky Store Administration")
+        self.assertContains(response, "admin/css/custom_admin.css")
 
 
 class ProductAdminUploadTest(TestCase):

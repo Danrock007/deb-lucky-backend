@@ -7,6 +7,11 @@ from django.db import connections
 from django.db.utils import DatabaseError
 
 
+admin.site.site_header = "Deb Lucky Store"
+admin.site.site_title = "Deb Lucky Store Administration"
+admin.site.index_title = "Store overview"
+
+
 def health_check(request):
     try:
         connections["default"].ensure_connection()
