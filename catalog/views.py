@@ -1,6 +1,7 @@
 from rest_framework import generics
 from rest_framework.exceptions import ValidationError
-from .models import Product, Category
+
+from .models import Category, Product
 from .serializers import CategorySerializer, ProductSerializer
 
 
@@ -8,26 +9,44 @@ class ProductListView(generics.ListAPIView):
     serializer_class = ProductSerializer
 
     def get_queryset(self):
-        queryset = Product.objects.filter(is_active=True)
+        # Return only active products.
+        queryset = Product.objects.filter(
+            is_active=True
+        ).order_by("id")
 
+        # Read the optional category ID from the URL.
         category_id = self.request.query_params.get("category")
 
         if category_id is not None:
+            # Reject non-numeric, zero, and negative category IDs.
             if not category_id.isdigit() or int(category_id) <= 0:
                 raise ValidationError({
-                    "category": "Category ID must be a positive integer."
+                    "category": "Enter a valid positive category ID."
                 })
 
-            queryset = queryset.filter(category_id=int(category_id))
+            # Filter products by the selected category.
+            queryset = queryset.filter(
+                category_id=int(category_id),
+                category__is_active=True,
+            )
 
         return queryset
 
 
 class ProductDetailView(generics.RetrieveAPIView):
-    queryset = Product.objects.filter(is_active=True)
     serializer_class = ProductSerializer
+
+    def get_queryset(self):
+        # Customers should only retrieve active products.
+        return Product.objects.filter(
+            is_active=True
+        ).order_by("id")
 
 
 class CategoryListView(generics.ListAPIView):
-    queryset = Category.objects.filter(is_active=True)
+    # Return only active categories in a consistent order.
+    queryset = Category.objects.filter(
+        is_active=True
+    ).order_by("id")
+
     serializer_class = CategorySerializer
