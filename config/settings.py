@@ -42,6 +42,7 @@ CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
 
 PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY", "")
 PAYSTACK_CALLBACK_URL = os.getenv("PAYSTACK_CALLBACK_URL", "")
+CONTACT_EMAIL = os.getenv("CONTACT_EMAIL", "")
 
 
 # Application definition
@@ -58,6 +59,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "catalog",
     "orders",
+    "support",
 ]
 
 MIDDLEWARE = [
@@ -165,7 +167,7 @@ STORAGES = {
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-# Email
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "orders@example.com")
 if DEBUG:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 else:
@@ -175,7 +177,6 @@ else:
     EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
     EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
     EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "true").lower() in {"1", "true", "yes"}
-    DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "orders@example.com")
 
 
 REST_FRAMEWORK = {
@@ -190,6 +191,7 @@ REST_FRAMEWORK = {
         "anon": "120/hour",
         "user": "1000/hour",
         "payment": "20/hour",
+        "contact": "5/hour",
     },
 }
 

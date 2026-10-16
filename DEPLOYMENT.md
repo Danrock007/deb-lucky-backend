@@ -29,6 +29,18 @@ Configure the SMTP variables (`EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`,
 to deliver order-confirmation messages. Delivery failures are logged without
 rolling back a verified payment.
 
+Set `CONTACT_EMAIL` to the inbox that should receive storefront contact-form
+submissions. The `/api/contact/` endpoint sends messages through the configured
+email backend, applies a five-per-hour anonymous request limit, and returns an
+error instead of reporting success when delivery is unavailable. Configure a
+shared Django cache or edge rate limit if that limit must be shared across
+multiple backend instances. In local development, Django prints contact
+messages to the console.
+
+The storefront newsletter form is not connected to a mailing-list provider.
+Connect it only after selecting a provider and configuring its credentials and
+required subscriber-consent/unsubscribe flow.
+
 ## Container deployment
 
 Build the backend image from this directory:
