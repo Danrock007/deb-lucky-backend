@@ -38,11 +38,19 @@ CORS_ALLOWED_ORIGINS = env_list(
     "CORS_ALLOWED_ORIGINS",
     "http://localhost:5173,http://127.0.0.1:5173" if DEBUG else "",
 )
-CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = env_list(
+    "CSRF_TRUSTED_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173" if DEBUG else "",
+)
 
 PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY", "")
 PAYSTACK_CALLBACK_URL = os.getenv("PAYSTACK_CALLBACK_URL", "")
 CONTACT_EMAIL = os.getenv("CONTACT_EMAIL", "")
+ACCOUNT_VERIFICATION_URL = os.getenv(
+    "ACCOUNT_VERIFICATION_URL",
+    "http://localhost:5173/account/verify",
+)
 
 
 # Application definition
@@ -60,6 +68,7 @@ INSTALLED_APPS = [
     "catalog",
     "orders",
     "support",
+    "accounts",
 ]
 
 MIDDLEWARE = [
@@ -192,6 +201,7 @@ REST_FRAMEWORK = {
         "user": "1000/hour",
         "payment": "20/hour",
         "contact": "5/hour",
+        "account_auth": "10/hour",
     },
 }
 
@@ -202,6 +212,11 @@ SECURE_SSL_REDIRECT = os.getenv(
 ).lower() in {"1", "true", "yes"}
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SAMESITE = os.getenv(
+    "DJANGO_SESSION_COOKIE_SAMESITE",
+    "Lax" if DEBUG else "None",
+)
+CSRF_COOKIE_SAMESITE = SESSION_COOKIE_SAMESITE
 SECURE_CONTENT_TYPE_NOSNIFF = True
 if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000
