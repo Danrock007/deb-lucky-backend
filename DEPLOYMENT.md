@@ -10,10 +10,13 @@ commit a real `.env` file:
 - `DJANGO_ALLOWED_HOSTS`: comma-separated API and storefront proxy hostnames,
   without schemes
 - `CORS_ALLOWED_ORIGINS`: exact HTTPS storefront origins
-- `CSRF_TRUSTED_ORIGINS`: exact HTTPS origins used for Django admin
+- `CSRF_TRUSTED_ORIGINS`: exact HTTPS storefront and admin origins
 - `DATABASE_URL`: managed PostgreSQL connection string
 - `PAYSTACK_SECRET_KEY`: the server-side Paystack secret key
 - `PAYSTACK_CALLBACK_URL`: the storefront's HTTPS `/checkout` URL
+- `ACCOUNT_VERIFICATION_URL`: the storefront's HTTPS `/account/verify` URL
+- `DJANGO_SESSION_COOKIE_SAMESITE=None` for a storefront and API on separate
+  sites; secure cookies are enabled in production
 - `DJANGO_SECURE_SSL_REDIRECT=true` when the host terminates TLS and forwards
   `X-Forwarded-Proto: https` through to Django
 
@@ -26,8 +29,16 @@ for local development.
 
 Configure the SMTP variables (`EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`,
 `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`, and `DEFAULT_FROM_EMAIL`) before launch
-to deliver order-confirmation messages. Delivery failures are logged without
-rolling back a verified payment.
+to deliver order-confirmation and customer email-verification messages.
+Customer accounts are activated only after the customer verifies ownership of
+the email address; verification links expire after 24 hours. Delivery failures
+are logged and returned as errors.
+
+Account sessions use Django's CSRF-protected session cookies. The API enables
+credentialed CORS; allow only the storefront in `CORS_ALLOWED_ORIGINS` and
+`CSRF_TRUSTED_ORIGINS`. Configure a shared cache or edge rate limit for the
+10-per-hour account authentication limit when running multiple backend
+instances.
 
 Set `CONTACT_EMAIL` to the inbox that should receive storefront contact-form
 submissions. The `/api/contact/` endpoint sends messages through the configured
@@ -63,10 +74,18 @@ its default command uses Gunicorn. Configure the host's health check to call
 `/api/health/`. Create the initial admin user with `python manage.py
 createsuperuser` using the same production environment.
 
-The storefront may be hosted on a separate static site or built from
-`client/Dockerfile`. With a same-origin deployment, the Nginx frontend proxies
-`/api/` to the backend service (default upstream `backend:8000`). For separate
-origins, set the frontend build argument `VITE_API_URL` to
+The storefront is maintained in the separate `Deb_Lucky_Fashion_Jewelries`
+repository. It may be hosted on a static site or built from that repository's
+`client/Dockerfile` with the `client` directory as the Docker build context:
+
+```sh
+docker build -f client/Dockerfile -t deb-lucky-storefront client
+```
+
+For a same-origin deployment, put the Nginx frontend and backend on the same
+network and set `API_UPSTREAM` to the backend service hostname and port
+(default `backend:8000`). The frontend then proxies `/api/` to Django. For
+separate origins, set the frontend build argument `VITE_API_URL` to
 `https://api.example.com/api` and configure the matching CORS origin on Django.
 
 Inventory is checked both when an order is prepared and when its payment is
