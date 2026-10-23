@@ -11,6 +11,7 @@ from rest_framework.test import APITestCase, APIClient
 
 from catalog.models import Category, Product
 from .models import Order, OrderItem
+from .payments import initialize_paystack_transaction
 
 
 # ============================================================
@@ -193,7 +194,6 @@ class OrderAPITest(APITestCase):
 
 @override_settings(
     PAYSTACK_SECRET_KEY="sk_test_fake-secret",
-    PAYSTACK_CALLBACK_URL="https://shop.example.com/checkout",
 )
 class OrderPaymentFlowTests(APITestCase):
     def setUp(self):
@@ -230,6 +230,22 @@ class OrderPaymentFlowTests(APITestCase):
         self.assertEqual(order.status, "pending")
         initialize.assert_called_once()
         self.assertEqual(initialize.call_args.kwargs["amount_minor"], 25000)
+
+    @patch(
+        "orders.payments._paystack_request",
+        return_value={"authorization_url": "https://checkout.paystack.com/example"},
+    )
+    def test_paystack_initialization_does_not_send_callback_url(self, request):
+        initialize_paystack_transaction(
+            email="customer@example.com",
+            amount_minor=25000,
+            reference="DLJ-TEST",
+            metadata={"order_number": "DLJ-ORDER"},
+            payment_method="card",
+        )
+
+        payload = request.call_args.args[1]
+        self.assertNotIn("callback_url", payload)
 
     @patch(
         "orders.views.initialize_paystack_transaction",
@@ -362,7 +378,7 @@ class OrderPaymentFlowTests(APITestCase):
 
     @patch("orders.views.initialize_paystack_transaction")
     def test_prepare_requires_payment_configuration(self, initialize):
-        with override_settings(PAYSTACK_SECRET_KEY="", PAYSTACK_CALLBACK_URL=""):
+        with override_settings(PAYSTACK_SECRET_KEY=""):
             response = self.client.post(
                 self.prepare_url,
                 self.payload,

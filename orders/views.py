@@ -99,9 +99,9 @@ class OrderPrepareView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        if not settings.PAYSTACK_SECRET_KEY or not settings.PAYSTACK_CALLBACK_URL:
+        if not settings.PAYSTACK_SECRET_KEY:
             raise PaymentConfigurationError(
-                "PAYSTACK_SECRET_KEY and PAYSTACK_CALLBACK_URL must be configured before accepting payments."
+                "PAYSTACK_SECRET_KEY must be configured before accepting payments."
             )
 
         quantities = {item["product"]: item["quantity"] for item in data["items"]}

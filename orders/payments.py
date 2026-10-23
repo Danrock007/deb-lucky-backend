@@ -55,10 +55,6 @@ def initialize_paystack_transaction(
     metadata,
     payment_method,
 ):
-    if not settings.PAYSTACK_CALLBACK_URL:
-        raise PaymentConfigurationError(
-            "PAYSTACK_CALLBACK_URL must be configured before accepting payments."
-        )
     data = _paystack_request(
         "transaction/initialize",
         {
@@ -66,7 +62,6 @@ def initialize_paystack_transaction(
             "amount": amount_minor,
             "currency": "GHS",
             "reference": reference,
-            "callback_url": settings.PAYSTACK_CALLBACK_URL,
             "metadata": metadata,
             "channels": ["card"] if payment_method == "card" else ["mobile_money"],
         },
