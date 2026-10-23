@@ -46,6 +46,17 @@ CSRF_TRUSTED_ORIGINS = env_list(
     "http://localhost:5173,http://127.0.0.1:5173" if DEBUG else "",
 )
 
+CLOUDINARY_CONFIG = {
+    "CLOUD_NAME": os.getenv("CLOUDINARY_CLOUD_NAME", ""),
+    "API_KEY": os.getenv("CLOUDINARY_API_KEY", ""),
+    "API_SECRET": os.getenv("CLOUDINARY_API_SECRET", ""),
+}
+CLOUDINARY_CONFIGURED = all(CLOUDINARY_CONFIG.values())
+if any(CLOUDINARY_CONFIG.values()) and not CLOUDINARY_CONFIGURED:
+    raise ImproperlyConfigured(
+        "Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET together."
+    )
+
 PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY", "")
 PAYSTACK_CALLBACK_URL = os.getenv("PAYSTACK_CALLBACK_URL", "")
 CONTACT_EMAIL = os.getenv("CONTACT_EMAIL", "")
@@ -65,6 +76,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    *(
+        ["cloudinary_storage", "cloudinary"]
+        if CLOUDINARY_CONFIGURED
+        else []
+    ),
     "corsheaders",
     "rest_framework",
     "catalog",
@@ -159,18 +175,21 @@ STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
-MEDIA_ROOT = Path(
-    os.getenv(
-        "DJANGO_MEDIA_ROOT",
-        "/var/data/media" if not DEBUG else BASE_DIR / "media",
-    )
-)
+MEDIA_ROOT = Path(os.getenv("DJANGO_MEDIA_ROOT", BASE_DIR / "media"))
 STORAGES = {
-    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "default": {
+        "BACKEND": (
+            "cloudinary_storage.storage.MediaCloudinaryStorage"
+            if CLOUDINARY_CONFIGURED
+            else "django.core.files.storage.FileSystemStorage"
+        )
+    },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
+if CLOUDINARY_CONFIGURED:
+    CLOUDINARY_STORAGE = CLOUDINARY_CONFIG
 
 
 # Email
