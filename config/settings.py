@@ -159,7 +159,12 @@ STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
-MEDIA_ROOT = Path(os.getenv("DJANGO_MEDIA_ROOT", BASE_DIR / "media"))
+MEDIA_ROOT = Path(
+    os.getenv(
+        "DJANGO_MEDIA_ROOT",
+        "/var/data/media" if not DEBUG else BASE_DIR / "media",
+    )
+)
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {

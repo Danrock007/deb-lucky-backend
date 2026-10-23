@@ -1,10 +1,11 @@
 import base64
+from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.forms import ClearableFileInput
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.test.utils import override_settings
 from django.core.files.base import ContentFile
 from rest_framework import status
@@ -12,6 +13,25 @@ from rest_framework.test import APITestCase
 
 from .models import Category, Product
 from .serializers import ProductSerializer
+
+
+class MediaServingTest(SimpleTestCase):
+    @override_settings(DEBUG=False)
+    def test_uploaded_media_is_served_when_debug_is_disabled(self):
+        with TemporaryDirectory() as media_root:
+            image_path = Path(media_root) / "products" / "test-image.jpg"
+            image_path.parent.mkdir()
+            image_path.write_bytes(b"test image")
+            with override_settings(MEDIA_ROOT=media_root):
+                response = self.client.get(
+                    "/media/products/test-image.jpg",
+                    secure=True,
+                )
+                content = b"".join(response.streaming_content)
+                response.close()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(content, b"test image")
 
 
 @override_settings(
