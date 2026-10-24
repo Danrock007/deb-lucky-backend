@@ -13,7 +13,6 @@ commit a real `.env` file:
 - `CSRF_TRUSTED_ORIGINS`: exact HTTPS storefront and admin origins
 - `DATABASE_URL`: managed PostgreSQL connection string
 - `PAYSTACK_SECRET_KEY`: the server-side Paystack secret key
-- `PAYSTACK_CALLBACK_URL`: the storefront's HTTPS `/checkout` URL
 - `ACCOUNT_VERIFICATION_URL`: the storefront's HTTPS `/account/verify` URL
 - `DJANGO_SESSION_COOKIE_SAMESITE=None` for a storefront and API on separate
   sites; secure cookies are enabled in production
@@ -99,8 +98,9 @@ low-stock items.
 Configure the Paystack dashboard webhook URL as
 `https://api.example.com/api/orders/paystack/webhook/`. The webhook endpoint
 validates Paystack's HMAC signature and independently verifies each payment
-before changing order status or inventory. The checkout callback also performs
-server-side transaction verification and is safe to retry.
+before changing order status or inventory. The storefront should verify a
+transaction through `/api/orders/verify-payment/` using the returned payment
+reference. Payment verification is server-side and safe to retry.
 
 Use Paystack test keys and test transactions in staging. Switch to a live
 secret key only after the HTTPS domain, database backups, webhook, admin
